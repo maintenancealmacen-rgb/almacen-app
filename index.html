@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Almacén">
+<link rel="manifest" href="manifest.json">
+<title>Almacén Mantenimiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0f14;
+    --surface: #111820;
+    --surface2: #1a2535;
+    --border: #1e3a5f;
+    --accent: #00c4ff;
+    --accent2: #ff6b2b;
+    --red: #ff2d55;
+    --green: #00e676;
+    --yellow: #ffcc00;
+    --text: #e8f4f8;
+    --text2: #7a9ab5;
+    --font: 'Rajdhani', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,196,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,196,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCREENS */
+  .screen { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; }
+  .screen.active { display: flex; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0f1923 0%, #1a2535 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #0077aa);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .header h1 span { color: var(--accent); }
+
+  /* HOME SCREEN */
+  .home-content {
+    flex: 1;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .status-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text2);
+    text-transform: uppercase;
+    padding: 0 4px;
+  }
+
+  .action-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .action-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--card-color, var(--accent)), transparent);
+  }
+  .action-card:active { transform: scale(0.98); background: var(--surface2); }
+
+  .action-card .card-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--card-color, var(--accent)) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--card-color, var(--accent)) 30%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .action-card .card-text { flex: 1; }
+  .action-card .card-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .action-card .card-desc {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.4;
+  }
+  .action-card .card-arrow {
+    font-size: 20px;
+    color: var(--text2);
+    flex-shrink: 0;
+  }
+  .card-salida { --card-color: var(--accent); }
+  .card-entrada { --card-color: var(--green); }
+  .card-inventario { --card-color: var(--yellow); }
+
+  /* SCAN SCREEN */
+  .scan-content { flex: 1; display: flex; flex-direction: column; }
+  #qr-reader {
+    width: 100%;
+    flex: 1;
+    background: #000;
+  }
+  #qr-reader video { width: 100% !important; }
+  #qr-reader img { display: none !important; }
+
+  .scan-hint {
+    padding: 20px;
+    text-align: center;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .scan-hint p {
+    font-size: 15px;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+
+  /* FORM SCREEN */
+  .form-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .item-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .item-card .item-ref {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .item-card .item-name {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .item-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-box {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .stat-value.red { color: var(--red); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.green { color: var(--green); }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+  .field-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 17px;
+    font-family: var(--font);
+    color: var(--text);
+    width: 100%;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,196,255,0.1);
+  }
+  input[type="number"].field-input { font-family: var(--mono); font-size: 20px; }
+
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    border: none;
+    font-family: var(--font);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0077aa);
+    color: #fff;
+  }
+  .btn-success {
+    background: linear-gradient(135deg, var(--green), #00a050);
+    color: #000;
+  }
+  .btn-danger {
+    background: linear-gradient(135deg, var(--red), #aa0030);
+    color: #fff;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  /* CONFIRM MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 20px 20px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-icon { font-size: 40px; text-align: center; margin-bottom: 16px; }
+  .modal-title {
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .modal-body {
+    text-align: center;
+    color: var(--text2);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .modal-body strong { color: var(--text); }
+  .modal-buttons { display: flex; gap: 12px; }
+  .modal-buttons .btn { flex: 1; }
+
+  /* PIN SCREEN */
+  .pin-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 32px;
+  }
+  .pin-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .pin-title span { color: var(--green); }
+  .pin-dots {
+    display: flex;
+    gap: 16px;
+  }
+  .pin-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    transition: all 0.15s;
+  }
+  .pin-dot.filled {
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 10px var(--green);
+  }
+  .pin-dot.error {
+    background: var(--red);
+    border-color: var(--red);
+    box-shadow: 0 0 10px var(--red);
+    animation: shake 0.3s ease;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
+  }
+  .pin-key {
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 28px;
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pin-key:active { background: var(--surface2); transform: scale(0.93); }
+  .pin-key.delete { font-size: 20px; }
+  .pin-key.empty { cursor: default; background: transparent; border: none; }
+
+  /* INVENTORY SCREEN */
+  .inventory-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .inv-search {
+    margin-bottom: 16px;
+  }
+  .inv-group-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    padding: 16px 4px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .inv-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .inv-row:active { background: var(--surface2); }
+  .inv-row.alert { border-left-color: var(--red); }
+  .inv-row.warning { border-left-color: var(--yellow); }
+  .inv-row.ok { border-left-color: var(--green); }
+  .inv-name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .inv-ref { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .inv-stock {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .inv-stock.red { color: var(--red); }
+  .inv-stock.yellow { color: var(--yellow); }
+  .inv-stock.green { color: var(--green); }
+  .inv-min { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    z-index: 200;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.warning { border-color: var(--yellow); color: var(--yellow); }
+
+  /* BACK BTN */
+  .back-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px;
+    margin-right: 4px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,15,20,0.9);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .loading-overlay.active { display: flex; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text2);
+    letter-spacing: 2px;
+  }
+
+  /* CONFIG SCREEN */
+  .config-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+  .config-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .config-section h3 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    font-family: var(--mono);
+  }
+  .config-info {
+    background: rgba(0,196,255,0.05);
+    border: 1px solid rgba(0,196,255,0.2);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+  .config-info code {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(0,196,255,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .config-step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    background: var(--accent);
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-text { font-size: 14px; color: var(--text2); line-height: 1.6; }
+  .step-text strong { color: var(--text); }
+  .step-text a { color: var(--accent); }
+
+  /* QR GENERATOR */
+  .qr-gen-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .qr-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+  }
+  .qr-item:active { background: var(--surface2); }
+  .qr-preview { width: 60px; height: 60px; border-radius: 8px; background: #fff; flex-shrink: 0; }
+  .qr-info { flex: 1; }
+  .qr-info .qr-name { font-size: 16px; font-weight: 600; margin-bottom: 3px; }
+  .qr-info .qr-ref { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .qr-btn-small {
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: var(--font);
+  }
+
+  /* MODAL FULL */
+  .modal-full {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 150;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    gap: 20px;
+  }
+  .modal-full.active { display: flex; }
+  .qr-large { background: #fff; padding: 16px; border-radius: 12px; }
+  .qr-large-name {
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .qr-large-ref {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  /* NAV BAR */
+  .nav-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px 8px;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    gap: 4px;
+    font-family: var(--mono);
+  }
+  .nav-item .nav-icon { font-size: 20px; }
+  .nav-item.active { color: var(--accent); }
+  .nav-item:active { opacity: 0.7; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ===================== HOME SCREEN ===================== -->
+<div class="screen active" id="screen-home">
+  <div class="header">
+    <div class="header-icon">🏭</div>
+    <h1>Almacén <span>MNT</span></h1>
+    <button onclick="showScreen('screen-config')" style="margin-left:auto;background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;">⚙️</button>
+  </div>
+  <div class="home-content">
+    <div class="status-bar">
+      <div class="status-dot" id="conn-dot"></div>
+      <span id="conn-text">Verificando conexión...</span>
+    </div>
+
+    <div class="section-label">// acciones principales</div>
+
+    <div class="action-card card-salida" onclick="startSalida()">
+      <div class="card-icon">📤</div>
+      <div class="card-text">
+        <div class="card-title">Salida de Material</div>
+        <div class="card-desc">Escanear QR y descontar stock</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="action-card card-entrada" onclick="showScreen('screen-pin')">
+      <div class="card-icon">📥</div>
+      <div class="card-text">
+        <div class="card-title">Entrada de Material</div>
+        <div class="card-desc">Añadir stock (requiere PIN)</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="action-card card-inventario" onclick="loadInventory()">
+      <div class="card-icon">📋</div>
+      <div class="card-text">
+        <div class="card-title">Ver Inventario</div>
+        <div class="card-desc">Consultar stock y alertas</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="action-card" style="--card-color:#aa88ff" onclick="showScreen('screen-qrgen')">
+      <div class="card-icon">🔲</div>
+      <div class="card-text">
+        <div class="card-title">Generar QR</div>
+        <div class="card-desc">Crear QR para cada repuesto</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-item active" onclick="showScreen('screen-home')">
+      <span class="nav-icon">🏠</span>Inicio
+    </div>
+    <div class="nav-item" onclick="loadInventory()">
+      <span class="nav-icon">📋</span>Stock
+    </div>
+    <div class="nav-item" onclick="showScreen('screen-config')">
+      <span class="nav-icon">⚙️</span>Config
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SCAN SCREEN ===================== -->
+<div class="screen" id="screen-scan">
+  <div class="header">
+    <button class="back-btn" onclick="stopScanner()">‹</button>
+    <div class="header-icon">📷</div>
+    <h1>Escanear <span>QR</span></h1>
+  </div>
+  <div class="scan-content">
+    <div id="qr-reader"></div>
+    <div class="scan-hint">
+      <p>Apunta la cámara al código QR del repuesto</p>
+      <button class="btn btn-ghost" style="width:auto;padding:10px 20px" onclick="stopScanner()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FORM SALIDA ===================== -->
+<div class="screen" id="screen-form-salida">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('screen-home')">‹</button>
+    <div class="header-icon">📤</div>
+    <h1>Salida <span>Material</span></h1>
+  </div>
+  <div class="form-content">
+    <div class="item-card" id="salida-item-card">
+      <div class="item-ref" id="salida-ref">—</div>
+      <div class="item-name" id="salida-name">Cargando...</div>
+      <div class="item-stats">
+        <div class="stat-box">
+          <span class="stat-label">Stock</span>
+          <span class="stat-value" id="salida-stock">—</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Mínimo</span>
+          <span class="stat-value" id="salida-min">—</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Ubic.</span>
+          <span class="stat-value" style="font-size:14px" id="salida-ubic">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Tu nombre</label>
+      <input type="text" class="field-input" id="salida-nombre" placeholder="Nombre y apellido"
+        value="">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Cantidad a sacar</label>
+      <input type="number" class="field-input" id="salida-cantidad" min="1" value="1" placeholder="1">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Uso / Motivo</label>
+      <input type="text" class="field-input" id="salida-uso" placeholder="ej. mantenimiento, limpieza...">
+    </div>
+
+    <button class="btn btn-primary" onclick="confirmarSalida()">Confirmar Salida</button>
+    <button class="btn btn-ghost" onclick="showScreen('screen-home')" style="margin-top:-8px">Cancelar</button>
+  </div>
+</div>
+
+<!-- ===================== FORM ENTRADA ===================== -->
+<div class="screen" id="screen-form-entrada">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('screen-home')">‹</button>
+    <div class="header-icon">📥</div>
+    <h1>Entrada <span>Material</span></h1>
+  </div>
+  <div class="form-content">
+    <div class="item-card" id="entrada-item-card">
+      <div class="item-ref" id="entrada-ref">—</div>
+      <div class="item-name" id="entrada-name">Esperando escaneo...</div>
+      <div class="item-stats">
+        <div class="stat-box">
+          <span class="stat-label">Stock Actual</span>
+          <span class="stat-value green" id="entrada-stock">—</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Mínimo</span>
+          <span class="stat-value" id="entrada-min">—</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Ubic.</span>
+          <span class="stat-value" style="font-size:14px" id="entrada-ubic">—</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-ghost" onclick="startEntradaScan()" style="gap:8px">
+      📷 Escanear QR del repuesto
+    </button>
+
+    <div class="field-group">
+      <label class="field-label">Cantidad a añadir</label>
+      <input type="number" class="field-input" id="entrada-cantidad" min="1" value="1" placeholder="1">
+    </div>
+
+    <button class="btn btn-success" onclick="confirmarEntrada()">Confirmar Entrada</button>
+    <button class="btn btn-ghost" onclick="showScreen('screen-home')" style="margin-top:-8px">Cancelar</button>
+  </div>
+</div>
+
+<!-- ===================== PIN SCREEN ===================== -->
+<div class="screen" id="screen-pin">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('screen-home')">‹</button>
+    <div class="header-icon">🔒</div>
+    <h1>Acceso <span>Restringido</span></h1>
+  </div>
+  <div class="pin-content">
+    <div class="pin-title">Introduce el <span>PIN</span></div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+    <div class="pin-keypad">
+      <div class="pin-key" onclick="pinPress('1')">1</div>
+      <div class="pin-key" onclick="pinPress('2')">2</div>
+      <div class="pin-key" onclick="pinPress('3')">3</div>
+      <div class="pin-key" onclick="pinPress('4')">4</div>
+      <div class="pin-key" onclick="pinPress('5')">5</div>
+      <div class="pin-key" onclick="pinPress('6')">6</div>
+      <div class="pin-key" onclick="pinPress('7')">7</div>
+      <div class="pin-key" onclick="pinPress('8')">8</div>
+      <div class="pin-key" onclick="pinPress('9')">9</div>
+      <div class="pin-key empty"></div>
+      <div class="pin-key" onclick="pinPress('0')">0</div>
+      <div class="pin-key delete" onclick="pinDelete()">⌫</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== INVENTORY SCREEN ===================== -->
+<div class="screen" id="screen-inventory">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('screen-home')">‹</button>
+    <div class="header-icon">📋</div>
+    <h1>Inventario <span>Stock</span></h1>
+  </div>
+  <div class="inventory-content">
+    <div class="inv-search">
+      <input type="text" class="field-input" id="inv-search" placeholder="🔍 Buscar repuesto..." oninput="filterInventory()">
+    </div>
+    <div id="inv-list">
+      <div style="text-align:center;padding:40px;color:var(--text2)">Cargando inventario...</div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-item" onclick="showScreen('screen-home')">
+      <span class="nav-icon">🏠</span>Inicio
+    </div>
+    <div class="nav-item active" onclick="loadInventory()">
+      <span class="nav-icon">📋</span>Stock
+    </div>
+    <div class="nav-item" onclick="showScreen('screen-config')">
+      <span class="nav-icon">⚙️</span>Config
+    </div>
+  </div>
+</div>
+
+<!-- ===================== QR GEN SCREEN ===================== -->
+<div class="screen" id="screen-qrgen">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('screen-home')">‹</button>
+    <div class="header-icon">🔲</div>
+    <h1>Generar <span>QR</span></h1>
+  </div>
+  <div class="qr-gen-content">
+    <div style="margin-bottom:16px">
+      <input type="text" class="field-input" id="qrgen-search" placeholder="🔍 Buscar repuesto..." oninput="filterQRList()">
+    </div>
+    <div id="qr-list">
+      <div style="text-align:center;padding:40px;color:var(--text2)">Carga el inventario primero desde la pantalla de inicio</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONFIG SCREEN ===================== -->
+<div class="screen" id="screen-config">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('screen-home')">‹</button>
+    <div class="header-icon">⚙️</div>
+    <h1>Configuración</h1>
+  </div>
+  <div class="config-content">
+    <div class="config-section">
+      <h3>// API Google Sheets</h3>
+      <div class="field-group" style="margin-bottom:12px">
+        <label class="field-label">API Key de Google</label>
+        <input type="text" class="field-input" id="cfg-apikey" placeholder="AIzaSy..." style="font-family:var(--mono);font-size:13px">
+      </div>
+      <div class="field-group" style="margin-bottom:12px">
+        <label class="field-label">ID del Spreadsheet</label>
+        <input type="text" class="field-input" id="cfg-sheetid" placeholder="1fXg-WHcl3fe4kHG5emPRZ..." style="font-family:var(--mono);font-size:13px">
+      </div>
+      <div class="field-group" style="margin-bottom:16px">
+        <label class="field-label">PIN de entrada de material</label>
+        <input type="password" class="field-input" id="cfg-pin" placeholder="4 dígitos" maxlength="4" style="font-family:var(--mono);font-size:24px;letter-spacing:8px">
+      </div>
+      <button class="btn btn-primary" onclick="saveConfig()">Guardar Configuración</button>
+    </div>
+
+    <div class="config-section">
+      <h3>// Cómo configurar (paso a paso)</h3>
+      <div class="config-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Ve a <strong>console.cloud.google.com</strong> e inicia sesión con tu cuenta de Google</div>
+      </div>
+      <div class="config-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Crea un proyecto nuevo (o usa uno existente). Nombre: <strong>Almacen App</strong></div>
+      </div>
+      <div class="config-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Ve a <strong>APIs y servicios → Biblioteca</strong> y activa <strong>Google Sheets API</strong></div>
+      </div>
+      <div class="config-step">
+        <div class="step-num">4</div>
+        <div class="step-text">Ve a <strong>APIs y servicios → Credenciales → Crear credencial → Clave de API</strong>. Copia la clave y pégala arriba</div>
+      </div>
+      <div class="config-step">
+        <div class="step-num">5</div>
+        <div class="step-text">En tu Google Sheets, ve a <strong>Compartir</strong> y cambia a <strong>"Cualquier persona con el enlace puede editar"</strong></div>
+      </div>
+      <div class="config-step">
+        <div class="step-num">6</div>
+        <div class="step-text">El ID del spreadsheet es la parte de la URL entre <code>/d/</code> y <code>/edit</code></div>
+      </div>
+      <div class="config-step">
+        <div class="step-num">7</div>
+        <div class="step-text">Guarda la configuración y prueba desde la pantalla de inicio</div>
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h3>// Instalar como App</h3>
+      <div class="config-info">
+        En Chrome Android: pulsa el menú <strong>⋮</strong> → <strong>"Añadir a pantalla de inicio"</strong>.<br><br>
+        La app funcionará sin conexión y aparecerá como una app nativa.
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h3>// Email de alertas</h3>
+      <div class="config-info">
+        Los avisos de stock mínimo se envían a:<br>
+        <code>silvia.vicen@sigit.es</code><br><br>
+        Se envían automáticamente cuando el stock queda por debajo del mínimo tras una salida.
+      </div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-item" onclick="showScreen('screen-home')">
+      <span class="nav-icon">🏠</span>Inicio
+    </div>
+    <div class="nav-item" onclick="loadInventory()">
+      <span class="nav-icon">📋</span>Stock
+    </div>
+    <div class="nav-item active" onclick="showScreen('screen-config')">
+      <span class="nav-icon">⚙️</span>Config
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONFIRM MODAL ===================== -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal">
+    <div class="modal-icon" id="modal-icon">⚠️</div>
+    <div class="modal-title" id="modal-title">¿Confirmar operación?</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modal-confirm-btn" onclick="executeOperation()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== QR FULLSCREEN ===================== -->
+<div class="modal-full" id="modal-qr-full">
+  <button class="back-btn" style="position:absolute;top:20px;left:20px;font-size:28px" onclick="document.getElementById('modal-qr-full').classList.remove('active')">✕</button>
+  <div class="qr-large-name" id="qr-full-name"></div>
+  <div class="qr-large-ref" id="qr-full-ref"></div>
+  <div class="qr-large" id="qr-full-container"></div>
+  <p style="font-size:13px;color:var(--text2);text-align:center">Pulsa largo en el QR para guardar imagen</p>
+  <button class="btn btn-ghost" style="width:auto;padding:12px 24px" onclick="document.getElementById('modal-qr-full').classList.remove('active')">Cerrar</button>
+</div>
+
+<!-- ===================== LOADING ===================== -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">PROCESANDO...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- QR Generator library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+// ===================== CONFIG =====================
+const CONFIG_KEY = 'almacen_config';
+let config = {
+  apiKey: '',
+  sheetId: '1fXg-WHcl3fe4kHG5emPRZhklsRdkqbDYqCTAR0gysto',
+  pin: '1234'
+};
+
+const EMAIL_ALERTA = 'silvia.vicen@sigit.es';
+const HOJA_INVENTARIO = 'Hoja 1';
+const HOJA_REGISTRO = 'Hoja 2';
+const COL_DESCRIPCION = 0; // A
+const COL_REFERENCIA = 1;  // B
+const COL_PROVEEDOR = 2;   // C
+const COL_STOCK = 3;       // D
+const COL_EQUIPO = 4;      // E
+const COL_MIN = 5;         // F
+const COL_UBIC = 6;        // G
+
+// ===================== STATE =====================
+let inventoryData = [];
+let currentItem = null;
+let pendingOperation = null;
+let scanMode = 'salida'; // 'salida' | 'entrada'
+let htmlScanner = null;
+let pinBuffer = '';
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+  checkConnection();
+  loadLastName();
+});
+
+function loadConfig() {
+  const saved = localStorage.getItem(CONFIG_KEY);
+  if (saved) {
+    config = { ...config, ...JSON.parse(saved) };
+  }
+  document.getElementById('cfg-apikey').value = config.apiKey || '';
+  document.getElementById('cfg-sheetid').value = config.sheetId || '';
+  document.getElementById('cfg-pin').value = config.pin || '';
+}
+
+function saveConfig() {
+  config.apiKey = document.getElementById('cfg-apikey').value.trim();
+  config.sheetId = document.getElementById('cfg-sheetid').value.trim();
+  config.pin = document.getElementById('cfg-pin').value.trim();
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  showToast('Configuración guardada ✓', 'success');
+  checkConnection();
+}
+
+function loadLastName() {
+  const name = localStorage.getItem('last_name');
+  if (name) document.getElementById('salida-nombre').value = name;
+}
+
+async function checkConnection() {
+  const dot = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  if (!config.apiKey) {
+    dot.style.background = 'var(--yellow)';
+    dot.style.boxShadow = '0 0 8px var(--yellow)';
+    text.textContent = 'Configura tu API Key para conectar';
+    return;
+  }
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${config.apiKey}&fields=properties.title`;
+    const r = await fetch(url);
+    if (r.ok) {
+      const d = await r.json();
+      dot.style.background = 'var(--green)';
+      dot.style.boxShadow = '0 0 8px var(--green)';
+      text.textContent = `Conectado: ${d.properties.title}`;
+    } else {
+      throw new Error('Error API');
+    }
+  } catch(e) {
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow = '0 0 8px var(--red)';
+    text.textContent = 'Sin conexión — verifica la configuración';
+  }
+}
+
+// ===================== NAVIGATION =====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===================== SCANNER =====================
+function startSalida() {
+  scanMode = 'salida';
+  startScanner();
+}
+
+function startEntradaScan() {
+  scanMode = 'entrada';
+  startScanner();
+}
+
+function startScanner() {
+  showScreen('screen-scan');
+  setTimeout(() => {
+    htmlScanner = new Html5Qrcode("qr-reader");
+    htmlScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      onQRSuccess,
+      () => {}
+    ).catch(err => {
+      showToast('Error cámara: ' + err, 'error');
+      showScreen('screen-home');
+    });
+  }, 200);
+}
+
+function stopScanner() {
+  if (htmlScanner) {
+    htmlScanner.stop().catch(() => {});
+    htmlScanner = null;
+  }
+  showScreen('screen-home');
+}
+
+async function onQRSuccess(decodedText) {
+  if (htmlScanner) {
+    await htmlScanner.stop();
+    htmlScanner = null;
+  }
+  // QR format: "ALMACEN:REFERENCIA"
+  let ref = decodedText;
+  if (decodedText.startsWith('ALMACEN:')) {
+    ref = decodedText.replace('ALMACEN:', '');
+  }
+  await loadItemByRef(ref, scanMode);
+}
+
+// ===================== SHEETS API =====================
+async function sheetsGet(range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${encodeURIComponent(range)}?key=${config.apiKey}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`API error ${r.status}`);
+  return (await r.json()).values || [];
+}
+
+async function sheetsUpdate(range, values) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${config.apiKey}`;
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  if (!r.ok) {
+    const err = await r.json();
+    throw new Error(err.error?.message || 'Error al actualizar');
+  }
+  return await r.json();
+}
+
+async function sheetsAppend(range, values) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${config.apiKey}`;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  if (!r.ok) throw new Error('Error al registrar');
+  return await r.json();
+}
+
+// ===================== INVENTORY =====================
+async function loadInventory() {
+  showScreen('screen-inventory');
+  showLoading('Cargando inventario...');
+  try {
+    inventoryData = await fetchAllInventory();
+    renderInventory(inventoryData);
+    renderQRList(inventoryData);
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    document.getElementById('inv-list').innerHTML =
+      `<div style="text-align:center;padding:40px;color:var(--red)">Error al cargar.<br><small>${e.message}</small><br><br><small>¿Tienes la API Key configurada?</small></div>`;
+  } finally {
+    hideLoading();
+  }
+}
+
+async function fetchAllInventory() {
+  // Read all data rows from Hoja 1, starting from row 5 (header is row 4)
+  const range = `'${HOJA_INVENTARIO}'!A5:G500`;
+  const rows = await sheetsGet(range);
+  const items = [];
+  let rowIdx = 5;
+  for (const row of rows) {
+    const desc = (row[COL_DESCRIPCION] || '').trim();
+    if (!desc || desc === '') { rowIdx++; continue; }
+    // Skip section header rows (they're in column A merged/colored - check if it looks like a header)
+    // Headers like "LUBRICACION ESTANTERIA" typically have no reference
+    const ref = (row[COL_REFERENCIA] || '').trim();
+    if (!ref) { rowIdx++; continue; }
+    const stock = parseInt(row[COL_STOCK] || '0') || 0;
+    const min = parseInt(row[COL_MIN] || '0') || 0;
+    items.push({
+      row: rowIdx,
+      descripcion: desc,
+      referencia: ref,
+      proveedor: row[COL_PROVEEDOR] || '',
+      stock,
+      min,
+      equipo: row[COL_EQUIPO] || '',
+      ubicacion: row[COL_UBIC] || ''
+    });
+    rowIdx++;
+  }
+  return items;
+}
+
+function renderInventory(items) {
+  const list = document.getElementById('inv-list');
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">Sin datos</div>';
+    return;
+  }
+  const alerts = items.filter(i => i.stock < i.min);
+  let html = '';
+  if (alerts.length) {
+    html += `<div class="inv-group-label">⚠️ Alertas de stock (${alerts.length})</div>`;
+    for (const item of alerts) html += renderInvRow(item);
+  }
+  html += `<div class="inv-group-label">// todos los repuestos (${items.length})</div>`;
+  for (const item of items) html += renderInvRow(item);
+  list.innerHTML = html;
+}
+
+function renderInvRow(item) {
+  const ratio = item.min > 0 ? item.stock / item.min : 1;
+  let cls = 'ok', stockCls = 'green';
+  if (item.stock < item.min) { cls = 'alert'; stockCls = 'red'; }
+  else if (ratio < 1.5) { cls = 'warning'; stockCls = 'yellow'; }
+  return `<div class="inv-row ${cls}" onclick="quickSalida('${item.referencia}')">
+    <div>
+      <div class="inv-name">${item.descripcion}</div>
+      <div class="inv-ref">${item.referencia} · ${item.proveedor}</div>
+    </div>
+    <div class="inv-stock ${stockCls}">
+      ${item.stock}
+      <div class="inv-min">min: ${item.min}</div>
+    </div>
+  </div>`;
+}
+
+function filterInventory() {
+  const q = document.getElementById('inv-search').value.toLowerCase();
+  const filtered = inventoryData.filter(i =>
+    i.descripcion.toLowerCase().includes(q) ||
+    i.referencia.toLowerCase().includes(q) ||
+    i.proveedor.toLowerCase().includes(q)
+  );
+  renderInventory(filtered);
+}
+
+// ===================== LOAD ITEM =====================
+async function loadItemByRef(ref, mode) {
+  showLoading('Buscando repuesto...');
+  try {
+    if (!inventoryData.length) {
+      inventoryData = await fetchAllInventory();
+    }
+    const item = inventoryData.find(i =>
+      i.referencia.toLowerCase() === ref.toLowerCase() ||
+      i.descripcion.toLowerCase() === ref.toLowerCase()
+    );
+    if (!item) {
+      showToast('Repuesto no encontrado: ' + ref, 'error');
+      showScreen('screen-home');
+      return;
+    }
+    currentItem = item;
+    if (mode === 'salida') {
+      populateSalidaForm(item);
+      showScreen('screen-form-salida');
+    } else {
+      populateEntradaForm(item);
+      showScreen('screen-form-entrada');
+    }
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    showScreen('screen-home');
+  } finally {
+    hideLoading();
+  }
+}
+
+function quickSalida(ref) {
+  loadItemByRef(ref, 'salida');
+}
+
+// ===================== SALIDA FORM =====================
+function populateSalidaForm(item) {
+  document.getElementById('salida-ref').textContent = item.referencia;
+  document.getElementById('salida-name').textContent = item.descripcion;
+  const stockEl = document.getElementById('salida-stock');
+  stockEl.textContent = item.stock;
+  stockEl.className = 'stat-value ' + (item.stock < item.min ? 'red' : item.stock < item.min * 1.5 ? 'yellow' : 'green');
+  document.getElementById('salida-min').textContent = item.min;
+  document.getElementById('salida-ubic').textContent = item.ubicacion || '—';
+  document.getElementById('salida-cantidad').value = 1;
+  document.getElementById('salida-uso').value = '';
+}
+
+function confirmarSalida() {
+  const nombre = document.getElementById('salida-nombre').value.trim();
+  const cantidad = parseInt(document.getElementById('salida-cantidad').value);
+  const uso = document.getElementById('salida-uso').value.trim();
+
+  if (!nombre) { showToast('Introduce tu nombre', 'warning'); return; }
+  if (!cantidad || cantidad <= 0) { showToast('Cantidad inválida', 'warning'); return; }
+  if (!uso) { showToast('Indica el uso/motivo', 'warning'); return; }
+  if (cantidad > currentItem.stock) {
+    showToast(`Solo hay ${currentItem.stock} unidades en stock`, 'error'); return;
+  }
+
+  localStorage.setItem('last_name', nombre);
+
+  pendingOperation = { type: 'salida', item: currentItem, nombre, cantidad, uso };
+
+  document.getElementById('modal-icon').textContent = '📤';
+  document.getElementById('modal-title').textContent = '¿Confirmar salida?';
+  document.getElementById('modal-body').innerHTML =
+    `Vas a sacar <strong>${cantidad} ud.</strong> de<br><strong>${currentItem.descripcion}</strong><br><br>
+     Nombre: <strong>${nombre}</strong><br>
+     Uso: <strong>${uso}</strong><br><br>
+     Stock restante: <strong>${currentItem.stock - cantidad}</strong>`;
+  document.getElementById('modal-confirm-btn').className = 'btn btn-danger';
+  document.getElementById('modal-confirm-btn').textContent = 'Sí, sacar';
+  document.getElementById('modal-confirm').classList.add('active');
+}
+
+// ===================== ENTRADA FORM =====================
+function populateEntradaForm(item) {
+  document.getElementById('entrada-ref').textContent = item.referencia;
+  document.getElementById('entrada-name').textContent = item.descripcion;
+  document.getElementById('entrada-stock').textContent = item.stock;
+  document.getElementById('entrada-min').textContent = item.min;
+  document.getElementById('entrada-ubic').textContent = item.ubicacion || '—';
+  document.getElementById('entrada-cantidad').value = 1;
+}
+
+function confirmarEntrada() {
+  if (!currentItem || !currentItem.referencia || currentItem.referencia === '—') {
+    showToast('Escanea primero el QR del repuesto', 'warning'); return;
+  }
+  const cantidad = parseInt(document.getElementById('entrada-cantidad').value);
+  if (!cantidad || cantidad <= 0) { showToast('Cantidad inválida', 'warning'); return; }
+
+  pendingOperation = { type: 'entrada', item: currentItem, cantidad };
+
+  document.getElementById('modal-icon').textContent = '📥';
+  document.getElementById('modal-title').textContent = '¿Confirmar entrada?';
+  document.getElementById('modal-body').innerHTML =
+    `Vas a añadir <strong>${cantidad} ud.</strong> de<br><strong>${currentItem.descripcion}</strong><br><br>
+     Nuevo stock: <strong>${currentItem.stock + cantidad}</strong>`;
+  document.getElementById('modal-confirm-btn').className = 'btn btn-success';
+  document.getElementById('modal-confirm-btn').textContent = 'Sí, añadir';
+  document.getElementById('modal-confirm').classList.add('active');
+}
+
+// ===================== EXECUTE =====================
+async function executeOperation() {
+  closeModal();
+  if (!pendingOperation) return;
+  showLoading('Actualizando Google Sheets...');
+
+  const op = pendingOperation;
+  pendingOperation = null;
+
+  try {
+    const item = op.item;
+    const newStock = op.type === 'salida'
+      ? item.stock - op.cantidad
+      : item.stock + op.cantidad;
+
+    // Update stock in Hoja 1
+    const stockRange = `'${HOJA_INVENTARIO}'!D${item.row}`;
+    await sheetsUpdate(stockRange, [[newStock]]);
+
+    // Register in Hoja 2
+    const now = new Date();
+    const fechaStr = now.toLocaleString('es-ES', {
+      weekday: 'short', year: 'numeric', month: 'short',
+      day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    const uso = op.type === 'salida' ? op.uso : 'entrada de material';
+    const nombre = op.type === 'salida' ? op.nombre : 'Admin';
+    const cantVal = op.type === 'salida' ? -op.cantidad : op.cantidad;
+
+    await sheetsAppend(`'${HOJA_REGISTRO}'!A:F`, [[
+      fechaStr, nombre, item.descripcion, cantVal, uso, item.referencia
+    ]]);
+
+    // Update local data
+    item.stock = newStock;
+
+    // Check alert
+    if (op.type === 'salida' && newStock < item.min) {
+      await sendEmailAlert(item, newStock);
+      showToast(`⚠️ Stock bajo mínimo. Aviso enviado a ${EMAIL_ALERTA}`, 'warning');
+    } else {
+      showToast(op.type === 'salida' ? '✓ Salida registrada' : '✓ Entrada registrada', 'success');
+    }
+
+    showScreen('screen-home');
+
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ===================== EMAIL ALERT =====================
+async function sendEmailAlert(item, currentStock) {
+  // Uses EmailJS free service - user needs to configure
+  // As fallback, we use a mailto link approach
+  try {
+    // Try EmailJS if configured
+    const emailjsKey = localStorage.getItem('emailjs_key');
+    const emailjsService = localStorage.getItem('emailjs_service');
+    const emailjsTemplate = localStorage.getItem('emailjs_template');
+
+    if (emailjsKey && emailjsService && emailjsTemplate) {
+      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: emailjsService,
+          template_id: emailjsTemplate,
+          user_id: emailjsKey,
+          template_params: {
+            to_email: EMAIL_ALERTA,
+            repuesto: item.descripcion,
+            referencia: item.referencia,
+            stock_actual: currentStock,
+            stock_minimo: item.min,
+            ubicacion: item.ubicacion
+          }
+        })
+      });
+    }
+    // Also log the alert
+    console.log(`ALERTA EMAIL: ${item.descripcion} - Stock: ${currentStock}/${item.min}`);
+  } catch(e) {
+    console.error('Email alert failed:', e);
+  }
+}
+
+// ===================== PIN =====================
+function pinPress(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(checkPin, 100);
+  }
+}
+
+function pinDelete() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots(error = false) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    dot.className = 'pin-dot' + (i < pinBuffer.length ? (error ? ' error' : ' filled') : '');
+  }
+}
+
+function checkPin() {
+  if (pinBuffer === config.pin) {
+    pinBuffer = '';
+    updatePinDots();
+    currentItem = { referencia: '—', descripcion: 'Esperando escaneo...', stock: 0, min: 0, ubicacion: '' };
+    showScreen('screen-form-entrada');
+  } else {
+    updatePinDots(true);
+    setTimeout(() => {
+      pinBuffer = '';
+      updatePinDots();
+    }, 800);
+    showToast('PIN incorrecto', 'error');
+  }
+}
+
+// ===================== QR GENERATION =====================
+function renderQRList(items) {
+  const list = document.getElementById('qr-list');
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">Sin datos</div>';
+    return;
+  }
+  let html = '';
+  for (const item of items) {
+    html += `<div class="qr-item" onclick="showQRFull('${escapeAttr(item.referencia)}','${escapeAttr(item.descripcion)}')">
+      <canvas id="qr-mini-${escapeId(item.referencia)}" class="qr-preview"></canvas>
+      <div class="qr-info">
+        <div class="qr-name">${item.descripcion}</div>
+        <div class="qr-ref">${item.referencia}</div>
+      </div>
+      <button class="qr-btn-small">Ver QR</button>
+    </div>`;
+  }
+  list.innerHTML = html;
+  // Generate mini QRs
+  setTimeout(() => {
+    for (const item of items) {
+      const canvas = document.getElementById(`qr-mini-${escapeId(item.referencia)}`);
+      if (canvas) {
+        try {
+          new QRCode(canvas, {
+            text: `ALMACEN:${item.referencia}`,
+            width: 60, height: 60,
+            colorDark: '#000000', colorLight: '#ffffff'
+          });
+        } catch(e) {}
+      }
+    }
+  }, 100);
+}
+
+function filterQRList() {
+  const q = document.getElementById('qrgen-search').value.toLowerCase();
+  const filtered = inventoryData.filter(i =>
+    i.descripcion.toLowerCase().includes(q) || i.referencia.toLowerCase().includes(q)
+  );
+  renderQRList(filtered);
+}
+
+function showQRFull(ref, name) {
+  document.getElementById('qr-full-name').textContent = name;
+  document.getElementById('qr-full-ref').textContent = ref;
+  const container = document.getElementById('qr-full-container');
+  container.innerHTML = '';
+  new QRCode(container, {
+    text: `ALMACEN:${ref}`,
+    width: 250, height: 250,
+    colorDark: '#000000', colorLight: '#ffffff'
+  });
+  document.getElementById('modal-qr-full').classList.add('active');
+}
+
+// ===================== HELPERS =====================
+function escapeAttr(s) { return s.replace(/'/g, "\\'"); }
+function escapeId(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function closeModal() {
+  document.getElementById('modal-confirm').classList.remove('active');
+}
+
+function showLoading(text = 'Procesando...') {
+  document.getElementById('loading-text').textContent = text.toUpperCase();
+  document.getElementById('loading').classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loading').classList.remove('active');
+}
+
+let toastTimeout;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
