@@ -1089,6 +1089,7 @@ const CONFIG_KEY = 'almacen_config';
 let config = {
   apiKey: '',
   sheetId: '1fXg-WHcl3fe4kHG5emPRZhklsRdkqbDYqCTAR0gysto',
+  scriptUrl: 'https://script.google.com/macros/s/AKfycbx6QhIhp3Pp_YTyKv5rLFEjmOUnU7AVgYi3nSnTZPlVZ_izFh1WfSpXUJRWvY1Mttn0/exec',
   pin: '1234'
 };
 
@@ -1123,13 +1124,13 @@ function loadConfig() {
   if (saved) {
     config = { ...config, ...JSON.parse(saved) };
   }
-  document.getElementById('cfg-apikey').value = config.apiKey || '';
+  document.getElementById('cfg-apikey').value = config.scriptUrl || '';
   document.getElementById('cfg-sheetid').value = config.sheetId || '';
   document.getElementById('cfg-pin').value = config.pin || '';
 }
 
 function saveConfig() {
-  config.apiKey = document.getElementById('cfg-apikey').value.trim();
+  config.scriptUrl = document.getElementById('cfg-apikey').value.trim();
   config.sheetId = document.getElementById('cfg-sheetid').value.trim();
   config.pin = document.getElementById('cfg-pin').value.trim();
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
@@ -1145,23 +1146,23 @@ function loadLastName() {
 async function checkConnection() {
   const dot = document.getElementById('conn-dot');
   const text = document.getElementById('conn-text');
-  if (!config.apiKey) {
+  if (!config.scriptUrl) {
     dot.style.background = 'var(--yellow)';
     dot.style.boxShadow = '0 0 8px var(--yellow)';
-    text.textContent = 'Configura tu API Key para conectar';
+    text.textContent = 'URL del script no configurada';
     return;
   }
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${config.apiKey}&fields=properties.title`;
+    const url = `${config.scriptUrl}?action=getInventory`;
     const r = await fetch(url);
     if (r.ok) {
       const d = await r.json();
-      dot.style.background = 'var(--green)';
-      dot.style.boxShadow = '0 0 8px var(--green)';
-      text.textContent = `Conectado: ${d.properties.title}`;
-    } else {
-      throw new Error('Error API');
-    }
+      if (d.items) {
+        dot.style.background = 'var(--green)';
+        dot.style.boxShadow = '0 0 8px var(--green)';
+        text.textContent = `Conectado · ${d.items.length} repuestos`;
+      } else throw new Error('Sin datos');
+    } else throw new Error('Error API');
   } catch(e) {
     dot.style.background = 'var(--red)';
     dot.style.boxShadow = '0 0 8px var(--red)';
@@ -1223,37 +1224,14 @@ async function onQRSuccess(decodedText) {
   await loadItemByRef(ref, scanMode);
 }
 
-// ===================== SHEETS API =====================
-async function sheetsGet(range) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${encodeURIComponent(range)}?key=${config.apiKey}`;
+// ===================== APPS SCRIPT API =====================
+async function scriptCall(params) {
+  const url = config.scriptUrl + '?' + new URLSearchParams(params).toString();
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`API error ${r.status}`);
-  return (await r.json()).values || [];
-}
-
-async function sheetsUpdate(range, values) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${config.apiKey}`;
-  const r = await fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
-  });
-  if (!r.ok) {
-    const err = await r.json();
-    throw new Error(err.error?.message || 'Error al actualizar');
-  }
-  return await r.json();
-}
-
-async function sheetsAppend(range, values) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${config.apiKey}`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
-  });
-  if (!r.ok) throw new Error('Error al registrar');
-  return await r.json();
+  if (!r.ok) throw new Error(`Error ${r.status}`);
+  const data = await r.json();
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 // ===================== INVENTORY =====================
@@ -1267,40 +1245,15 @@ async function loadInventory() {
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
     document.getElementById('inv-list').innerHTML =
-      `<div style="text-align:center;padding:40px;color:var(--red)">Error al cargar.<br><small>${e.message}</small><br><br><small>¿Tienes la API Key configurada?</small></div>`;
+      `<div style="text-align:center;padding:40px;color:var(--red)">Error al cargar.<br><small>${e.message}</small></div>`;
   } finally {
     hideLoading();
   }
 }
 
 async function fetchAllInventory() {
-  // Read all data rows from Hoja 1, starting from row 5 (header is row 4)
-  const range = `'${HOJA_INVENTARIO}'!A5:G500`;
-  const rows = await sheetsGet(range);
-  const items = [];
-  let rowIdx = 5;
-  for (const row of rows) {
-    const desc = (row[COL_DESCRIPCION] || '').trim();
-    if (!desc || desc === '') { rowIdx++; continue; }
-    // Skip section header rows (they're in column A merged/colored - check if it looks like a header)
-    // Headers like "LUBRICACION ESTANTERIA" typically have no reference
-    const ref = (row[COL_REFERENCIA] || '').trim();
-    if (!ref) { rowIdx++; continue; }
-    const stock = parseInt(row[COL_STOCK] || '0') || 0;
-    const min = parseInt(row[COL_MIN] || '0') || 0;
-    items.push({
-      row: rowIdx,
-      descripcion: desc,
-      referencia: ref,
-      proveedor: row[COL_PROVEEDOR] || '',
-      stock,
-      min,
-      equipo: row[COL_EQUIPO] || '',
-      ubicacion: row[COL_UBIC] || ''
-    });
-    rowIdx++;
-  }
-  return items;
+  const data = await scriptCall({ action: 'getInventory' });
+  return data.items || [];
 }
 
 function renderInventory(items) {
