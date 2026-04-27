@@ -1263,11 +1263,7 @@ async function onQRSuccess(decodedText) {
     await htmlScanner.stop();
     htmlScanner = null;
   }
-  // QR format: "ALMACEN:REFERENCIA"
-  let ref = decodedText;
-  if (decodedText.startsWith('ALMACEN:')) {
-    ref = decodedText.replace('ALMACEN:', '');
-  }
+  let ref = decodedText.trim();
   await loadItemByRef(ref, scanMode);
 }
 
@@ -1586,7 +1582,7 @@ function renderQRList(items) {
       if (canvas) {
         try {
           new QRCode(canvas, {
-            text: `ALMACEN:${item.referencia}`,
+            text: item.referencia,
             width: 60, height: 60,
             colorDark: '#000000', colorLight: '#ffffff'
           });
@@ -1610,7 +1606,7 @@ function showQRFull(ref, name) {
   const container = document.getElementById('qr-full-container');
   container.innerHTML = '';
   new QRCode(container, {
-    text: `ALMACEN:${ref}`,
+    text: ref,
     width: 250, height: 250,
     colorDark: '#000000', colorLight: '#ffffff'
   });
