@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Almacén">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="manifest" href="manifest.json">
 <title>Almacén Mantenimiento</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -972,8 +975,8 @@
     <div class="config-section">
       <h3>// API Google Sheets</h3>
       <div class="field-group" style="margin-bottom:12px">
-        <label class="field-label">API Key de Google</label>
-        <input type="text" class="field-input" id="cfg-apikey" placeholder="AIzaSy..." style="font-family:var(--mono);font-size:13px">
+        <label class="field-label">URL del Script (Apps Script)</label>
+        <input type="text" class="field-input" id="cfg-apikey" placeholder="https://script.google.com/macros/s/..." style="font-family:var(--mono);font-size:13px">
       </div>
       <div class="field-group" style="margin-bottom:12px">
         <label class="field-label">ID del Spreadsheet</label>
@@ -1421,23 +1424,20 @@ async function executeOperation() {
       ? item.stock - op.cantidad
       : item.stock + op.cantidad;
 
-    // Update stock in Hoja 1
-    const stockRange = `'${HOJA_INVENTARIO}'!D${item.row}`;
-    await sheetsUpdate(stockRange, [[newStock]]);
-
-    // Register in Hoja 2
-    const now = new Date();
-    const fechaStr = now.toLocaleString('es-ES', {
-      weekday: 'short', year: 'numeric', month: 'short',
-      day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
     const uso = op.type === 'salida' ? op.uso : 'entrada de material';
     const nombre = op.type === 'salida' ? op.nombre : 'Admin';
     const cantVal = op.type === 'salida' ? -op.cantidad : op.cantidad;
 
-    await sheetsAppend(`'${HOJA_REGISTRO}'!A:F`, [[
-      fechaStr, nombre, item.descripcion, cantVal, uso, item.referencia
-    ]]);
+    await scriptCall({
+      action: 'updateStock',
+      row: item.row,
+      newStock,
+      nombre,
+      material: item.descripcion,
+      cantidad: cantVal,
+      uso,
+      referencia: item.referencia
+    });
 
     // Update local data
     item.stock = newStock;
