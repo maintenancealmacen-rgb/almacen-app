@@ -1421,10 +1421,6 @@ async function executeOperation() {
       ? item.stock - op.cantidad
       : item.stock + op.cantidad;
 
-    // Update stock in Hoja 1
-    const stockRange = `'${HOJA_INVENTARIO}'!D${item.row}`;
-    await sheetsUpdate(stockRange, [[newStock]]);
-
     // Register in Hoja 2
     const now = new Date();
     const fechaStr = now.toLocaleString('es-ES', {
